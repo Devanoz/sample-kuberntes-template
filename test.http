@@ -1,0 +1,2 @@
+### Test nginx proxy to product-service
+GET http://localhost:30008/products
