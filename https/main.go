@@ -16,9 +16,17 @@ func main() {
 	fiberApp.Use(logger.New())
 
 	fiberApp.Get("/", func(c *fiber.Ctx) error {
-		c.SendString("Hello World")
+		err := c.SendString("Hello World")
+		if err != nil {
+			return err
+		}
 		return nil
 	})
 	log.Println(os.Getwd())
-	fiberApp.ListenTLS(":8000", "./cert.pem", "./key.pem")
+	err := fiberApp.ListenTLS(":8000", "server.crt", "server.key")
+	if err != nil {
+		log.Println(os.Getwd())
+		log.Fatal(err)
+		return
+	}
 }
