@@ -1,2 +1,24 @@
 ### Test nginx proxy to product-service
 GET http://localhost:30008/products
+
+### Create order for a product (uses gRPC to Order Service)
+POST http://localhost:30008/products/product-123/orders
+Content-Type: application/json
+
+{
+  "quantity": 5
+}
+
+### List orders for a product (uses gRPC to Order Service)
+GET http://localhost:30008/products/product-123/orders
+
+### Create order - direct to product-service (bypassing nginx)
+POST http://localhost:30009/products/product-456/orders
+Content-Type: application/json
+
+{
+  "quantity": 10
+}
+
+### List orders - direct to product-service
+GET http://localhost:30009/products/product-456/orders
