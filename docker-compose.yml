@@ -1,0 +1,81 @@
+name: grafana-stack
+volumes:
+  grafana:
+services:
+  # Grafana Alloy batches and processes traces sent to it, generating
+  # auto-logs from those traces.
+  # Includes Metrics, Logs, Traces and Profiles.
+  alloy:
+    image: grafana/alloy:v1.12.1
+    ports:
+      - "12350:12350"
+      - "12347:12345"
+      - "12348:12348"
+      - "6832:6832"
+      - "55679:55679"
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - "./alloy/config.alloy:/etc/alloy/config.alloy"
+      - "./alloy/endpoints.json:/etc/alloy/endpoints.json"
+    command: [
+      "run",
+      "--server.http.listen-addr=0.0.0.0:12345",
+      "--stability.level=public-preview",
+      "/etc/alloy/config.alloy",
+    ]
+
+  # The Grafana dashboarding server.
+  grafana:
+    image: grafana/grafana:12.3.1
+    volumes:
+      - "./grafana/definitions:/var/lib/grafana/dashboards"
+      - "./grafana/provisioning:/etc/grafana/provisioning"
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_FEATURE_TOGGLES_ENABLE=flameGraph traceqlSearch traceQLStreaming correlations metricsSummary traceqlEditor traceToMetrics traceToProfiles datatrails
+      - GF_INSTALL_PLUGINS=grafana-lokiexplore-app,grafana-exploretraces-app,grafana-pyroscope-app
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+
+  # The Tempo service stores traces send to it by Grafana Alloy, and takes
+  # queries from Grafana to visualise those traces.
+  tempo:
+    image: grafana/tempo:2.9.0
+    ports:
+      - "3200:3200"
+      - "9411:9411"
+      - "55680:55680"
+      - "55681:55681"
+      - "14250:14250"
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - "./tempo/tempo.yaml:/etc/tempo.yaml"
+
+  # The Loki service stores logs sent to it, and takes queries from Grafana
+  # to visualise those logs.
+  loki:
+    image: grafana/loki:3.6.3
+    command: ["--pattern-ingester.enabled=true", "-config.file=/etc/loki/loki.yaml"]
+    ports:
+      - "3100:3100"
+    volumes:
+      - "./loki/loki.yaml:/etc/loki/loki.yaml"
+
+  # Mimir for metrics storage
+  mimir:
+    image: grafana/mimir:2.17.4
+    command: ["-ingester.native-histograms-ingestion-enabled=true", "-config.file=/etc/mimir.yaml"]
+    ports:
+      - "9009:9009"
+    volumes:
+      - "./mimir/mimir.yaml:/etc/mimir.yaml"
+
+  # Pyroscope for continuous profiling
+  pyroscope:
+    image: grafana/pyroscope:1.16.2
+    ports:
+      - "4040:4040"
+    command: ["server"]
